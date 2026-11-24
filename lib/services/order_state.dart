@@ -73,7 +73,22 @@ class OrderState {
     _initFromDatabase();
   }
 
-  final ValueNotifier<List<OrderItem>> ordersNotifier = ValueNotifier<List<OrderItem>>([]);
+  final ValueNotifier<List<OrderItem>> ordersNotifier = ValueNotifier<List<OrderItem>>([
+    OrderItem(
+      orderId: '#FH341391',
+      productName: 'Apel Batu',
+      quantity: 10,
+      itemPrice: 30000,
+      adminFee: 15000,
+      totalPrice: 315000,
+      customerName: 'Ansellma Putri',
+      customerPhone: '0813 1903 0599',
+      customerAddress: 'Pulau Jeju blok A no 56',
+      customerCity: 'Jeju',
+      paymentMethod: 'Tunai',
+      status: 'Paid',
+    ),
+  ]);
 
   List<OrderItem> get orders => ordersNotifier.value;
 

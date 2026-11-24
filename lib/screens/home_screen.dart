@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import '../services/adaptive_device.dart';
+import 'agro_ai_screen.dart';
+import 'donation_screen.dart';
 import 'explore_screen.dart';
 import 'game_screen.dart';
 import 'market_screen.dart';
 import 'orders_screen.dart';
 import 'profile_screen.dart';
+import 'search_screen.dart';
+import 'tracking_screen.dart';
+import 'umkm_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,6 +44,11 @@ class _HomeScreenState extends State<HomeScreen> {
               _selectedIndex = 0;
             });
           },
+          onNavigateToTab: (tabIndex) {
+            setState(() {
+              _selectedIndex = tabIndex;
+            });
+          },
         );
       case 2:
         return MarketScreen(
@@ -61,7 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         );
       case 4:
-        return const ProfileScreen(showBackButton: false);
+        return ProfileScreen(
+          showBackButton: false,
+          onNavigateToTab: (tabIndex) {
+            setState(() {
+              _selectedIndex = tabIndex;
+            });
+          },
+        );
       case 0:
       default:
         return SafeArea(
@@ -104,38 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- 1. STATUS BAR HEADER (9:41) ---
+  // --- 1. STATUS BAR HEADER (ADAPTIVE IOS / ANDROID) ---
   Widget _buildStatusBarHeader() {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          '9:41',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF111827),
-          ),
-        ),
-        Row(
-          children: [
-            Icon(
-              Icons.signal_cellular_alt_rounded,
-              size: 16,
-              color: Color(0xFF111827),
-            ),
-            SizedBox(width: 4),
-            Icon(Icons.wifi_rounded, size: 16, color: Color(0xFF111827)),
-            SizedBox(width: 6),
-            Icon(
-              Icons.battery_full_rounded,
-              size: 20,
-              color: Color(0xFF111827),
-            ),
-          ],
-        ),
-      ],
-    );
+    return const AdaptiveStatusBar();
   }
 
   // --- 2. SEARCH BAR & PROFILE AVATAR ---
@@ -143,28 +132,46 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       children: [
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF1F4),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: const Row(
-              children: [
-                Icon(Icons.search_rounded, color: Color(0xFF6B7280), size: 22),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Cari buah segar atau paket wisata...',
-                    style: TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SearchScreen(
+                    onNavigateToTab: (index) {
+                      setState(() {
+                        _selectedIndex = index;
+                      });
+                    },
                   ),
                 ),
-              ],
+              );
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF1F4),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: const Row(
+                children: [
+                  Icon(Icons.search_rounded, color: Color(0xFF6B7280), size: 22),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Cari buah segar atau paket wisata...',
+                      style: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(Icons.mic_none_rounded, color: Color(0xFF15803D), size: 20),
+                ],
+              ),
             ),
           ),
         ),
@@ -401,6 +408,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 MaterialPageRoute(builder: (context) => const GameScreen()),
               );
+            } else if (item['title'] == 'UMKM Kita') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UmkmScreen()),
+              );
+            } else if (item['title'] == 'Donasi') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DonationScreen()),
+              );
+            } else if (item['title'] == 'Agro AI') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AgroAiScreen()),
+              );
             }
           },
           borderRadius: BorderRadius.circular(18),
@@ -549,9 +571,17 @@ class _HomeScreenState extends State<HomeScreen> {
               // Tombol LACAK
               ElevatedButton(
                 onPressed: () {
-                  setState(() {
-                    _selectedIndex = 3;
-                  });
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TrackingScreen(
+                        orderCode: '#FH341391',
+                        productName: 'Apel Cak Ka (10 kg)',
+                        destination: 'Jl. Ijen No. 12, Malang',
+                        driverName: 'Cak Yo',
+                      ),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF14532D),
@@ -682,24 +712,34 @@ class _HomeScreenState extends State<HomeScreen> {
     required String views,
     required String imageUrl,
   }) {
-    return Container(
-      width: 172,
-      height: 270,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 5),
-          ),
-        ],
+    return InkWell(
+      onTap: () => _openStoryModal(
+        context: context,
+        username: username,
+        caption: caption,
+        likes: likes,
+        views: views,
+        imageUrl: imageUrl,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: 172,
+        height: 270,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
             // Gambar Background
             Image.network(
               imageUrl,
@@ -828,6 +868,130 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    ),
+  );
+}
+
+  void _openStoryModal({
+    required BuildContext context,
+    required String username,
+    required String caption,
+    required String likes,
+    required String views,
+    required String imageUrl,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.82,
+          decoration: const BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                child: Image.network(imageUrl, fit: BoxFit.cover),
+              ),
+              Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black54,
+                      Colors.transparent,
+                      Colors.black87,
+                    ],
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Color(0xFF16A34A),
+                                child: Text('🍎', style: TextStyle(fontSize: 16)),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                  Text('$views tayangan • Kota Batu', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                                ],
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(caption, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(likes, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 18),
+                                    SizedBox(width: 6),
+                                    Text('Komentar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -852,27 +1016,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(navItems.length, (index) {
-            final item = navItems[index];
-            final isSelected = _selectedIndex == index;
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(navItems.length, (index) {
+                final item = navItems[index];
+                final isSelected = _selectedIndex == index;
 
-            if (isSelected) {
-              return _buildActiveTab(
-                icon: item['icon'] as IconData,
-                label: item['label'] as String,
-              );
-            }
+                if (isSelected) {
+                  return _buildActiveTab(
+                    icon: item['icon'] as IconData,
+                    label: item['label'] as String,
+                  );
+                }
 
-            return _buildInactiveTab(
-              index: index,
-              icon: item['icon'] as IconData,
-              label: item['label'] as String,
-            );
-          }),
+                return _buildInactiveTab(
+                  index: index,
+                  icon: item['icon'] as IconData,
+                  label: item['label'] as String,
+                );
+              }),
+            ),
+            const AdaptiveHomeIndicator(),
+          ],
         ),
       ),
     );
@@ -880,21 +1050,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActiveTab({required IconData icon, required String label}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFF14532D),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 18),
-          const SizedBox(width: 6),
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -914,14 +1084,14 @@ class _HomeScreenState extends State<HomeScreen> {
           _selectedIndex = index;
         });
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: const Color(0xFF6B7280), size: 22),
-            const SizedBox(height: 3),
+            Icon(icon, color: const Color(0xFF6B7280), size: 20),
+            const SizedBox(height: 2),
             Text(
               label,
               style: const TextStyle(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'services/adaptive_device.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,19 +11,27 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Agro App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF15803D),
-          primary: const Color(0xFF15803D),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFFBFBFB),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
-      home: const HomeScreen(),
+    return ValueListenableBuilder<TargetPlatform>(
+      valueListenable: AdaptivePlatform.platformNotifier,
+      builder: (context, currentPlatform, _) {
+        return MaterialApp(
+          title: 'Agro App',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            platform: currentPlatform,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF15803D),
+              primary: const Color(0xFF15803D),
+            ),
+            scaffoldBackgroundColor: const Color(0xFFFBFBFB),
+            useMaterial3: true,
+            fontFamily: currentPlatform == TargetPlatform.iOS ? 'SF Pro Text' : 'Roboto',
+          ),
+          home: const DeviceSimulatorWrapper(
+            child: HomeScreen(),
+          ),
+        );
+      },
     );
   }
 }

@@ -6,26 +6,22 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._internal();
   DatabaseService._internal();
 
-  // In web environment or device, connect to local backend API
-  // Use relative path '/api' on web so it works whether accessed via localhost or LAN IP (192.168.1.6:8080)
-  String get baseUrl {
-    if (kIsWeb) {
-      return '/api';
-    }
-    return 'http://192.168.1.6:8080/api';
-  }
+  // In Chrome debug mode without Node backend, return local data instantly
+  final bool enableHttp = false;
+
+  String get baseUrl => '/api';
 
   // ==========================================
   // --- USERS / PROFILE ---
   // ==========================================
   Future<Map<String, dynamic>> fetchUserProfile() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/user/active')).timeout(const Duration(seconds: 3));
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
-    } catch (e) {
-      debugPrint('DB Fetch Profile Error (using fallback): $e');
+    if (enableHttp) {
+      try {
+        final res = await http.get(Uri.parse('$baseUrl/user/active')).timeout(const Duration(milliseconds: 200));
+        if (res.statusCode == 200) {
+          return jsonDecode(res.body) as Map<String, dynamic>;
+        }
+      } catch (_) {}
     }
     return {
       'id': 1,

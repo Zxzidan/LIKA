@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_service.dart';
 import 'product_detail_screen.dart';
 
 class MarketScreen extends StatefulWidget {
@@ -14,7 +15,7 @@ class MarketScreen extends StatefulWidget {
 class _MarketScreenState extends State<MarketScreen> {
   int _selectedTab = 0; // 0: Komoditas, 1: Popular, 2: Recommended
 
-  final List<Map<String, dynamic>> _horizontalProducts = [
+  List<Map<String, dynamic>> _horizontalProducts = [
     {
       'title': 'Apel Batu',
       'price': 30000,
@@ -33,7 +34,7 @@ class _MarketScreenState extends State<MarketScreen> {
     },
   ];
 
-  final List<Map<String, dynamic>> _verticalProducts = [
+  List<Map<String, dynamic>> _verticalProducts = [
     {
       'title': 'Apel Batu',
       'price': 30000,
@@ -59,6 +60,33 @@ class _MarketScreenState extends State<MarketScreen> {
       'taste': 'Manis, Asam Segar',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProductsFromDb();
+  }
+
+  Future<void> _loadProductsFromDb() async {
+    try {
+      final prods = await DatabaseService.instance.fetchProducts();
+      if (prods.isNotEmpty && mounted) {
+        setState(() {
+          _verticalProducts = prods.map((p) => {
+            'id': p['id'],
+            'title': p['name'] ?? 'Produk',
+            'price': (p['price'] as num?)?.toInt() ?? 10000,
+            'rating': (p['rating'] as num?)?.toDouble() ?? 4.8,
+            'image': p['image_url'] ?? '',
+            'desc': p['description'] ?? '',
+            'taste': p['taste'] ?? 'Segar',
+          }).toList();
+
+          _horizontalProducts = _verticalProducts.take(2).toList();
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -281,28 +309,29 @@ class _MarketScreenState extends State<MarketScreen> {
           _selectedTab = index;
         });
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? const Color(0xFF111827) : const Color(0xFF9CA3AF),
+      borderRadius: BorderRadius.circular(4),
+      child: IntrinsicWidth(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? const Color(0xFF111827) : const Color(0xFF9CA3AF),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          if (isSelected)
+            const SizedBox(height: 4),
             Container(
-              width: 30,
               height: 2.5,
               decoration: BoxDecoration(
-                color: const Color(0xFF111827),
+                color: isSelected ? const Color(0xFF111827) : Colors.transparent,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/adaptive_device.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -14,6 +15,11 @@ class _GameScreenState extends State<GameScreen> {
   int _xp = 450;
   bool _gembrodCaught = false;
   bool _isCatching = false;
+  bool _flashOn = false;
+  bool _showGrid = true;
+  bool _isShutterFlashing = false;
+  Offset? _focusPoint;
+  Timer? _focusTimer;
 
   final List<Map<String, dynamic>> _inventory = [
     {
@@ -52,343 +58,701 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   // ==========================================
-  // --- 1. EXPLORATION MAP VIEW (IMAGE 3) ---
+  // --- 1. EXPLORATION PHONE CAMERA AR VIEW ---
   // ==========================================
   Widget _buildMapView() {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Background Orchard Landscape
-          Positioned.fill(
-            child: Image.network(
-              'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
-              fit: BoxFit.cover,
+      body: GestureDetector(
+        onTapDown: _onTapCamera,
+        child: Stack(
+          children: [
+            // 1. Live Apple Orchard Camera View (First-person perspective)
+            Positioned.fill(
+              child: Image.network(
+                'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=1200&q=80',
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          // Gradient Vignette
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.45),
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.6),
-                  ],
-                  stops: const [0.0, 0.2, 0.7, 1.0],
+
+            // 2. Camera Viewfinder Rule-of-Thirds Grid Overlay (Toggleable)
+            if (_showGrid)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _CameraGridPainter(),
+                ),
+              ),
+
+            // 3. Subtle Vignette Gradient for Contrast
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.55),
+                      Colors.transparent,
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.75),
+                    ],
+                    stops: const [0.0, 0.18, 0.70, 1.0],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // Top Header Bar
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // 4. Central AR Viewfinder Brackets & Focus Crosshair
+            Positioned.fill(
+              child: Center(
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFF00E676).withValues(alpha: 0.28),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Stack(
                     children: [
-                      InkWell(
-                        onTap: () => Navigator.of(context).pop(),
-                        borderRadius: BorderRadius.circular(20),
+                      // Corner brackets
+                      Positioned(
+                        top: 8,
+                        left: 8,
                         child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            shape: BoxShape.circle,
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                              left: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                            ),
                           ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Color(0xFF111827)),
                         ),
                       ),
-                      // Level & Location Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 12,
-                              backgroundColor: Color(0xFF16A34A),
-                              child: Text('🍎', style: TextStyle(fontSize: 12)),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                              right: BorderSide(color: Color(0xFF00E676), width: 2.5),
                             ),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'LVL 12 • $_xp XP',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF111827),
-                                  ),
-                                ),
-                                const Text(
-                                  'Wilayah Apel Batu',
-                                  style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
-                                ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                      // Settings Icon
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          shape: BoxShape.circle,
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                              left: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                            ),
+                          ),
                         ),
-                        child: const Icon(Icons.settings_outlined, size: 18, color: Color(0xFF16A34A)),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                              right: BorderSide(color: Color(0xFF00E676), width: 2.5),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                ),
+              ),
+            ),
 
-                  // Progress Card: Koleksi Apel
+            // 5. Floating AR Creature (Gembrod) in Camera Space
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Target Locked HUD Chip
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(24),
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF00E676), width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: const Color(0xFF00E676).withValues(alpha: 0.3),
                           blurRadius: 10,
-                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Column(
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.eco_outlined, color: Color(0xFF16A34A), size: 16),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Koleksi Apel',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF15803D),
-                                  ),
-                                ),
-                              ],
+                        Icon(Icons.track_changes_rounded, color: Color(0xFF00E676), size: 14),
+                        SizedBox(width: 6),
+                        Text(
+                          'TERKUNCI: GEMBROD (RARE)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          '• 8.2m',
+                          style: TextStyle(
+                            color: Color(0xFF34D399),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Floating Monster with Interactive Capture Tap
+                  GestureDetector(
+                    onTap: _triggerShutterCapture,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Outer Pulsing Ring
+                        Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF00E676).withValues(alpha: 0.4),
+                              width: 2,
                             ),
-                            Text(
-                              '${_inventory.length + (_gembrodCaught ? 1 : 0)}/50',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF374151),
+                          ),
+                        ),
+                        // Inner Ring
+                        Container(
+                          width: 115,
+                          height: 115,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF34D399).withValues(alpha: 0.8),
+                              width: 1.5,
+                            ),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          ),
+                        ),
+                        // Creature Avatar
+                        Container(
+                          width: 82,
+                          height: 82,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(22),
+                            color: const Color(0xFF1E293B).withValues(alpha: 0.9),
+                            border: Border.all(color: const Color(0xFF00E676), width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00E676).withValues(alpha: 0.5),
+                                blurRadius: 18,
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text('🍏👾', style: TextStyle(fontSize: 42)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Distance / Elevation Tag
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Tap Apelmon atau tekan tombol Rana',
+                      style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 6. Tap-to-Focus Indicator (Yellow/Green Box wherever user taps)
+            if (_focusPoint != null)
+              Positioned(
+                left: _focusPoint!.dx - 35,
+                top: _focusPoint!.dy - 35,
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFFACC15), width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFACC15),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // 7. Top Navigation Bar (Notch & Punch-Hole Safe!)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                child: Column(
+                  children: [
+                    // Status bar: 9:41, wifi, battery
+                    _buildStatusBarHeader(),
+                    const SizedBox(height: 8),
+
+                    // Top Bar Row: Left and Right only. Center is intentionally EMPTY to avoid phone camera hole!
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Left: Back button + LIVE AR Tag
+                        Row(
+                          children: [
+                            InkWell(
+                              onTap: () => Navigator.of(context).pop(),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white24, width: 0.8),
+                                ),
+                                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white24, width: 0.8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.fiber_manual_record_rounded, color: Color(0xFFEF4444), size: 10),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    'AR LIVE',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '60 FPS',
+                                    style: TextStyle(color: Colors.white60, fontSize: 9),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: (_inventory.length + (_gembrodCaught ? 1 : 0)) / 50,
-                            backgroundColor: Colors.grey.shade200,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-                            minHeight: 8,
+
+                        // Center: Empty Spacer (Ensures front camera punch hole / notch never covers UI!)
+                        const Spacer(),
+
+                        // Right: Camera Controls (Flash, Grid, Settings)
+                        Row(
+                          children: [
+                            // Flash Toggle
+                            InkWell(
+                              onTap: () {
+                                setState(() => _flashOn = !_flashOn);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(_flashOn ? 'Flash Kamera Aktif' : 'Flash Kamera Mati'),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _flashOn
+                                      ? const Color(0xFFFACC15).withValues(alpha: 0.3)
+                                      : Colors.black.withValues(alpha: 0.45),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _flashOn ? const Color(0xFFFACC15) : Colors.white24,
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Icon(
+                                  _flashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                  size: 16,
+                                  color: _flashOn ? const Color(0xFFFACC15) : Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Grid Toggle
+                            InkWell(
+                              onTap: () => setState(() => _showGrid = !_showGrid),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _showGrid
+                                      ? const Color(0xFF00E676).withValues(alpha: 0.25)
+                                      : Colors.black.withValues(alpha: 0.45),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _showGrid ? const Color(0xFF00E676) : Colors.white24,
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Icon(
+                                  _showGrid ? Icons.grid_on_rounded : Icons.grid_off_rounded,
+                                  size: 16,
+                                  color: _showGrid ? const Color(0xFF00E676) : Colors.white70,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Settings / Quick Menu
+                            InkWell(
+                              onTap: () => setState(() => _currentView = 3),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white24, width: 0.8),
+                                ),
+                                child: const Icon(Icons.settings_outlined, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Floating Stats Chips (Safely away from camera notch!)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Left: Level & XP Chip
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white24, width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('⭐', style: TextStyle(fontSize: 11)),
+                              const SizedBox(width: 5),
+                              Text(
+                                'LVL 12 • $_xp XP',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'PETA PETUALANGAN LIKA',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF6B7280),
-                            letterSpacing: 0.8,
+
+                        // Right: Collection Progress Chip
+                        InkWell(
+                          onTap: () => setState(() => _currentView = 3),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.5), width: 0.8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🍎', style: TextStyle(fontSize: 11)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Koleksi: ${_inventory.length + (_gembrodCaught ? 1 : 0)}/50',
+                                  style: const TextStyle(
+                                    color: Color(0xFF34D399),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Right Trophy Floating Button (Opens Inventory)
-          Positioned(
-            right: 18,
-            top: MediaQuery.of(context).size.height * 0.38,
-            child: InkWell(
-              onTap: () {
-                setState(() => _currentView = 3);
-              },
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF00C853),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
                   ],
                 ),
-                child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 24),
               ),
             ),
-          ),
 
-          // Character Chat Bubble
-          Positioned(
-            left: 20,
-            bottom: 230,
-            right: 40,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: const Color(0xFF1E293B),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Center(
-                    child: Text('🎧🍎', style: TextStyle(fontSize: 26)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            // 8. Bottom Camera HUD & Shutter Controls
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 24,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Subtle Radar Tip Toast (Glassmorphism)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                        bottomRight: Radius.circular(16),
-                      ),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white12, width: 0.8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.radar_rounded, color: Color(0xFF00E676), size: 14),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Apelmon langka terdeteksi di kebun apel Batu!',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
-                    child: const Text(
-                      'Psst! Ada Apel Emas langka dekat Kincir Ria!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2937),
-                      ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Camera Modes Selector Strip
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildCameraModeLabel('FOTO', active: false, onTap: null),
+                      const SizedBox(width: 20),
+                      _buildCameraModeLabel('AR SCAN', active: true, onTap: null),
+                      const SizedBox(width: 20),
+                      _buildCameraModeLabel('TAS', active: false, onTap: () => setState(() => _currentView = 3)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Phone Camera Shutter Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Left: Bag / Inventory Quick Shortcut
+                        InkWell(
+                          onTap: () => setState(() => _currentView = 3),
+                          borderRadius: BorderRadius.circular(26),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white38, width: 1.5),
+                                ),
+                                child: const Icon(Icons.backpack_outlined, color: Colors.white, size: 22),
+                              ),
+                              Positioned(
+                                top: -2,
+                                right: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF00E676),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '${_inventory.length + (_gembrodCaught ? 1 : 0)}',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Center: Big Smartphone Camera Shutter Button
+                        GestureDetector(
+                          onTap: _triggerShutterCapture,
+                          child: Container(
+                            width: 78,
+                            height: 78,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00E676).withValues(alpha: 0.4),
+                                  blurRadius: 18,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Container(
+                                width: 62,
+                                height: 62,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF00E676),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.track_changes_rounded,
+                                  color: Color(0xFF064E3B),
+                                  size: 30,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Right: Trophy / Rewards Quick Shortcut
+                        InkWell(
+                          onTap: () => setState(() => _currentView = 3),
+                          borderRadius: BorderRadius.circular(26),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white38, width: 1.5),
+                            ),
+                            child: const Icon(Icons.emoji_events_rounded, color: Color(0xFFFACC15), size: 24),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Bottom Radar Card
-          Positioned(
-            left: 18,
-            right: 18,
-            bottom: 95,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 12),
                 ],
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD1FAE5),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF10B981), width: 2),
-                    ),
-                    child: const Icon(Icons.radar_rounded, color: Color(0xFF059669), size: 26),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
+            ),
+
+            // 9. Camera Shutter Flash Effect (Flashes white when button is pressed)
+            if (_isShutterFlashing)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+              ),
+
+            // 10. Catching In-Progress Overlay
+            if (_isCatching)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  child: const Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 3),
+                        SizedBox(height: 16),
                         Text(
-                          'PENEMUAN TERDEKAT',
+                          'Menangkap Gembrod...',
                           style: TextStyle(
-                            fontSize: 10,
+                            color: Colors.white,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF10B981),
                             letterSpacing: 0.5,
                           ),
                         ),
-                        SizedBox(height: 3),
-                        Text(
-                          '3 Apelmon & 2 Jajanan ditemukan!',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Jalan 50m untuk mengungkap rahasia',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // Big Green Button: TANGKAP APELMON
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 24,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                setState(() => _currentView = 1);
-              },
-              icon: const Icon(Icons.track_changes_rounded, color: Color(0xFF111827), size: 22),
-              label: const Text(
-                'TANGKAP APELMON',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF111827),
-                  letterSpacing: 0.6,
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.black,
-                elevation: 6,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraModeLabel(String label, {required bool active, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: active ? const Color(0xFF00E676) : Colors.white60,
+              fontSize: 12,
+              fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+              letterSpacing: 0.8,
             ),
           ),
+          if (active) ...[
+            const SizedBox(height: 3),
+            Container(
+              width: 5,
+              height: 5,
+              decoration: const BoxDecoration(
+                color: Color(0xFF00E676),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1221,4 +1585,69 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
   }
+
+  void _onTapCamera(TapDownDetails details) {
+    setState(() {
+      _focusPoint = details.localPosition;
+    });
+    _focusTimer?.cancel();
+    _focusTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _focusPoint = null);
+    });
+  }
+
+  void _triggerShutterCapture() {
+    if (_isCatching) return;
+    setState(() {
+      _isShutterFlashing = true;
+      _isCatching = true;
+    });
+
+    Timer(const Duration(milliseconds: 140), () {
+      if (mounted) setState(() => _isShutterFlashing = false);
+    });
+
+    Timer(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      setState(() {
+        _isCatching = false;
+        _gembrodCaught = true;
+        _xp += 150;
+        _points += 20;
+        _currentView = 2; // Open Success Screen
+      });
+    });
+  }
+
+  Widget _buildStatusBarHeader() {
+    return const AdaptiveStatusBar(
+      contentColor: Colors.white,
+    );
+  }
+
+  @override
+  void dispose() {
+    _focusTimer?.cancel();
+    super.dispose();
+  }
+}
+
+class _CameraGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.18)
+      ..strokeWidth = 1.0;
+
+    final double colWidth = size.width / 3;
+    canvas.drawLine(Offset(colWidth, 0), Offset(colWidth, size.height), paint);
+    canvas.drawLine(Offset(colWidth * 2, 0), Offset(colWidth * 2, size.height), paint);
+
+    final double rowHeight = size.height / 3;
+    canvas.drawLine(Offset(0, rowHeight), Offset(size.width, rowHeight), paint);
+    canvas.drawLine(Offset(0, rowHeight * 2), Offset(size.width, rowHeight * 2), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
