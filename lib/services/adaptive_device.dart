@@ -324,7 +324,18 @@ class DeviceSimulatorWrapper extends StatelessWidget {
                           borderRadius: BorderRadius.circular(isIOS ? 38 : 26),
                           child: Stack(
                             children: [
-                              Positioned.fill(child: child),
+                              Positioned.fill(
+                                child: MediaQuery(
+                                  data: MediaQuery.of(context).copyWith(
+                                    size: const Size(390, 840),
+                                    padding: EdgeInsets.only(
+                                      top: isIOS ? 10 : 6,
+                                      bottom: 8,
+                                    ),
+                                  ),
+                                  child: child,
+                                ),
+                              ),
 
                               // Dynamic Island (iOS) vs Camera Punch Hole (Android)
                               Positioned(

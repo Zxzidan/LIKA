@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'onboarding_screen.dart';
 import 'tracking_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -23,6 +25,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _userHandle = 'dandizidan';
   String _userEmail = 'dandiazaidanedummy@gmail.com';
   String _userPhone = '0813 1903 0599';
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+          _userName = user.displayName!.trim();
+          _userHandle =
+              user.displayName!.trim().toLowerCase().replaceAll(' ', '');
+        }
+        if (user.email != null && user.email!.trim().isNotEmpty) {
+          _userEmail = user.email!.trim();
+        }
+      }
+    } catch (_) {}
+  }
   String _userBio = 'Pencinta buah apel segar Batu & penikmat agrowisata lokal.';
   String _userAvatar =
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
@@ -2586,9 +2606,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.pop(ctx);
-                    _showToast('Berhasil keluar dari akun Agro App');
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                    } catch (_) {}
+                    if (!mounted) return;
+                    _showToast('Berhasil keluar dari akun LIKA');
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const OnboardingScreen(startAtAuthChoice: true),
+                      ),
+                      (route) => false,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFDC2626),

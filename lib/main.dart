@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:poject_lika/firebase_options.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/adaptive_device.dart';
 
 void main() async {
@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
       valueListenable: AdaptivePlatform.platformNotifier,
       builder: (context, currentPlatform, _) {
         return MaterialApp(
-          title: 'Agro App',
+          title: 'LIKA Agrowisata',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             platform: currentPlatform,
@@ -36,7 +36,12 @@ class MyApp extends StatelessWidget {
                 ? 'SF Pro Text'
                 : 'Roboto',
           ),
-          home: const DeviceSimulatorWrapper(child: HomeScreen()),
+          builder: (context, child) {
+            return DeviceSimulatorWrapper(
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          home: const SplashScreen(),
         );
       },
     );
