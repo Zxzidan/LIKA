@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "507551277372",
+    "project_id": "lika-10f9c",
+    "storage_bucket": "lika-10f9c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507551277372:android:8b813ae29c71c3744c3e39",
+        "android_client_info": {
+          "package_name": "com.example.poject_lika"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB31X7G79UdcUGfBGZGLYUbJMBlb2su0hU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
