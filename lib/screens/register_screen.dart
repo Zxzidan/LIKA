@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/adaptive_device.dart';
+import '../services/database_service.dart';
+import '../services/order_state.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -72,7 +74,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: password,
       );
-      await cred.user?.updateDisplayName('$firstName $lastName'.trim());
+      final fullName = '$firstName $lastName'.trim();
+      await cred.user?.updateDisplayName(fullName);
+
+      // Save user profile document to Cloud Firestore
+      await DatabaseService.instance.saveUserProfile({
+        'uid': cred.user?.uid,
+        'name': fullName,
+        'handle': fullName.toLowerCase().replaceAll(' ', ''),
+        'email': email,
+        'phone': '0813 1903 0599',
+        'address': 'Jl. Raya Trawas No. 45, Mojokerto, Jawa Timur 61375',
+        'city': 'Mojokerto',
+        'addresses': [
+          {
+            'label': 'Rumah (Utama)',
+            'recipient': fullName,
+            'phone': '0813 1903 0599',
+            'address': 'Jl. Raya Trawas No. 45, Mojokerto, Jawa Timur 61375',
+            'city': 'Mojokerto',
+            'isPrimary': true,
+          },
+        ],
+        'role': 'Mitra',
+        'agropay_balance': 250000,
+        'points': 1450,
+        'coupons_count': 4,
+      }, uid: cred.user?.uid);
+      await OrderState.instance.refreshOrders();
 
       if (!mounted) return;
       setState(() {

@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/database_service.dart';
 import '../services/order_state.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -21,7 +23,137 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String _selectedPaymentMethod = 'Tunai';
-  final String _orderId = '#FH341391';
+  late final String _orderId =
+      '#FH${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
+  bool _isSubmitting = false;
+
+  String _customerName = 'Dandi Azaidane';
+  String _customerPhone = '0813 1903 0599';
+  String _customerAddress = 'Jl. Raya Trawas No. 45';
+  String _customerCity = 'Mojokerto';
+
+  String get _productTitle =>
+      (widget.product['title'] ?? widget.product['name'] ?? 'Pesanan LIKA')
+          .toString();
+
+  String get _productImage =>
+      (widget.product['image'] ??
+              'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=300&q=80')
+          .toString();
+
+  @override
+  void initState() {
+    super.initState();
+    _initCachedProfile();
+    _loadCustomerInfo();
+  }
+
+  void _initCachedProfile() {
+    final cached = DatabaseService.instance.userProfileNotifier.value;
+    if (cached != null) {
+      _applyProfileData(cached);
+    } else {
+      try {
+        final authName = FirebaseAuth.instance.currentUser?.displayName?.trim();
+        if (authName != null && authName.isNotEmpty) {
+          _customerName = authName;
+        }
+      } catch (_) {}
+    }
+  }
+
+  void _applyProfileData(Map<String, dynamic> profile) {
+    final name = profile['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) {
+      _customerName = name;
+    }
+    final phone = profile['phone']?.toString().trim();
+    if (phone != null && phone.isNotEmpty) {
+      _customerPhone = phone;
+    }
+
+    // Prefer primary address from addresses list if available
+    final addresses = profile['addresses'];
+    if (addresses is List && addresses.isNotEmpty) {
+      final primary = addresses.cast<Map>().firstWhere(
+            (a) => a['isPrimary'] == true,
+            orElse: () => addresses.first as Map,
+          );
+      final addrText = primary['address']?.toString().trim();
+      final cityText = primary['city']?.toString().trim();
+      final recName = primary['recipient']?.toString().trim();
+      final recPhone = primary['phone']?.toString().trim();
+      if (addrText != null && addrText.isNotEmpty) _customerAddress = addrText;
+      if (cityText != null && cityText.isNotEmpty) _customerCity = cityText;
+      if (recName != null && recName.isNotEmpty && _customerName.isEmpty) {
+        _customerName = recName;
+      }
+      if (recPhone != null && recPhone.isNotEmpty && _customerPhone.isEmpty) {
+        _customerPhone = recPhone;
+      }
+    } else {
+      final addr = profile['address']?.toString().trim();
+      final city = profile['city']?.toString().trim();
+      if (addr != null && addr.isNotEmpty) _customerAddress = addr;
+      if (city != null && city.isNotEmpty) _customerCity = city;
+    }
+  }
+
+  Future<void> _loadCustomerInfo() async {
+    final profile = await DatabaseService.instance.fetchUserProfile();
+    if (!mounted) return;
+    setState(() {
+      _applyProfileData(profile);
+    });
+  }
+
+  void _editCustomerInfoDialog() {
+    final nameCtrl = TextEditingController(text: _customerName);
+    final phoneCtrl = TextEditingController(text: _customerPhone);
+    final addrCtrl = TextEditingController(text: _customerAddress);
+    final cityCtrl = TextEditingController(text: _customerCity);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ubah Detail Pemesan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama Pemesan')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'No Telepon')),
+              TextField(controller: addrCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Alamat Lengkap')),
+              TextField(controller: cityCtrl, decoration: const InputDecoration(labelText: 'Kota')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                if (nameCtrl.text.trim().isNotEmpty) _customerName = nameCtrl.text.trim();
+                if (phoneCtrl.text.trim().isNotEmpty) _customerPhone = phoneCtrl.text.trim();
+                if (addrCtrl.text.trim().isNotEmpty) _customerAddress = addrCtrl.text.trim();
+                if (cityCtrl.text.trim().isNotEmpty) _customerCity = cityCtrl.text.trim();
+              });
+              DatabaseService.instance.saveUserProfile({
+                'name': _customerName,
+                'phone': _customerPhone,
+                'address': _customerAddress,
+                'city': _customerCity,
+              });
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF15803D), foregroundColor: Colors.white),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +213,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
                   child: Image.network(
-                    widget.product['image'] as String,
+                    _productImage,
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
@@ -99,7 +231,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.product['title'] as String,
+                        _productTitle,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -140,7 +272,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildRowText(widget.product['title'] as String, 'IDR ${_formatNumber(itemTotal)}'),
+            _buildRowText(_productTitle, 'IDR ${_formatNumber(itemTotal)}'),
             const SizedBox(height: 8),
             _buildRowText('Admin 5%', 'IDR ${_formatNumber(adminFee)}'),
             const SizedBox(height: 8),
@@ -164,22 +296,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 28),
 
             // 3. Detail Pemesan
-            const Text(
-              'Detail Pemesan :',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Detail Pemesan :',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _editCustomerInfoDialog,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text(
+                    'Ubah',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF15803D),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
-            _buildRowText('Nama', 'Ansellma Putri'),
+            _buildRowText('Nama', _customerName),
             const SizedBox(height: 8),
-            _buildRowText('No Telepon', '0813 1903 0599'),
+            _buildRowText('No Telepon', _customerPhone),
             const SizedBox(height: 8),
-            _buildRowText('Alamat', 'Pulau Jeju blok A no 56'),
+            _buildRowText('Alamat', _customerAddress),
             const SizedBox(height: 8),
-            _buildRowText('Kota', 'Jeju'),
+            _buildRowText('Kota', _customerCity),
             const SizedBox(height: 32),
 
             // 4. Metode Pembayaran Selector
@@ -243,7 +395,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _handlePayment(grandTotal, adminFee),
+                onPressed: _isSubmitting ? null : () => _handlePayment(grandTotal, adminFee),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00C853),
                   foregroundColor: Colors.white,
@@ -253,13 +405,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text(
-                  'Bayar Sekarang',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      )
+                    : const Text(
+                        'Bayar Sekarang',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -271,17 +429,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildRowText(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF111827),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF111827),
+            ),
           ),
         ),
       ],
@@ -325,24 +488,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _handlePayment(int grandTotal, int adminFee) {
-    // 1. Simpan pesanan ke dalam OrderState
+  Future<void> _handlePayment(int grandTotal, int adminFee) async {
+    setState(() => _isSubmitting = true);
+
+    // 1. Simpan pesanan ke dalam OrderState & Cloud Firestore
     final newOrder = OrderItem(
       orderId: _orderId,
-      productName: widget.product['title'] as String,
+      productName: _productTitle,
+      imageUrl: _productImage,
       quantity: widget.quantity,
       itemPrice: widget.totalPrice,
       adminFee: adminFee,
       totalPrice: grandTotal,
-      customerName: 'Ansellma Putri',
-      customerPhone: '0813 1903 0599',
-      customerAddress: 'Pulau Jeju blok A no 56',
-      customerCity: 'Jeju',
+      customerName: _customerName,
+      customerPhone: _customerPhone,
+      customerAddress: _customerAddress,
+      customerCity: _customerCity,
       paymentMethod: _selectedPaymentMethod,
       status: 'Paid',
     );
 
-    OrderState.instance.addOrder(newOrder);
+    await OrderState.instance.addOrder(newOrder);
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     // 2. Buka Success Screen "Yeay! Pesananmu telah terselesaikan"
     Navigator.pushReplacement(

@@ -4,6 +4,7 @@ import 'database_service.dart';
 class OrderItem {
   final String orderId;
   final String productName;
+  final String imageUrl;
   final int quantity;
   final int itemPrice;
   final int adminFee;
@@ -19,6 +20,8 @@ class OrderItem {
   OrderItem({
     required this.orderId,
     required this.productName,
+    this.imageUrl =
+        'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=300&q=80',
     required this.quantity,
     required this.itemPrice,
     required this.adminFee,
@@ -36,8 +39,10 @@ class OrderItem {
     return {
       'order_code': orderId,
       'product_name': productName,
+      'image_url': imageUrl,
       'quantity': quantity,
       'item_price': itemPrice,
+      'subtotal': itemPrice,
       'admin_fee': adminFee,
       'total_price': totalPrice,
       'customer_name': customerName,
@@ -53,14 +58,17 @@ class OrderItem {
     return OrderItem(
       orderId: map['order_code']?.toString() ?? '#FH341391',
       productName: map['product_name']?.toString() ?? 'Apel Batu',
-      quantity: (map['quantity'] as num?)?.toInt() ?? 10,
+      imageUrl: map['image_url']?.toString() ??
+          'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=300&q=80',
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
       itemPrice: (map['item_price'] as num?)?.toInt() ?? 30000,
-      adminFee: (map['admin_fee'] as num?)?.toInt() ?? 15000,
-      totalPrice: (map['total_price'] as num?)?.toInt() ?? 315000,
-      customerName: map['customer_name']?.toString() ?? 'Ansellma Putri',
+      adminFee: (map['admin_fee'] as num?)?.toInt() ?? 1500,
+      totalPrice: (map['total_price'] as num?)?.toInt() ?? 31500,
+      customerName: map['customer_name']?.toString() ?? 'Dandi Azaidane',
       customerPhone: map['customer_phone']?.toString() ?? '0813 1903 0599',
-      customerAddress: map['customer_address']?.toString() ?? 'Pulau Jeju blok A no 56',
-      customerCity: map['customer_city']?.toString() ?? 'Jeju',
+      customerAddress:
+          map['customer_address']?.toString() ?? 'Jl. Raya Trawas No. 45',
+      customerCity: map['customer_city']?.toString() ?? 'Mojokerto',
       paymentMethod: map['payment_method']?.toString() ?? 'Tunai',
       status: map['status']?.toString() ?? 'Paid',
     );
@@ -70,49 +78,35 @@ class OrderItem {
 class OrderState {
   static final OrderState instance = OrderState._internal();
   OrderState._internal() {
-    _initFromDatabase();
+    refreshOrders();
   }
 
-  final ValueNotifier<List<OrderItem>> ordersNotifier = ValueNotifier<List<OrderItem>>([
-    OrderItem(
-      orderId: '#FH341391',
-      productName: 'Apel Batu',
-      quantity: 10,
-      itemPrice: 30000,
-      adminFee: 15000,
-      totalPrice: 315000,
-      customerName: 'Ansellma Putri',
-      customerPhone: '0813 1903 0599',
-      customerAddress: 'Pulau Jeju blok A no 56',
-      customerCity: 'Jeju',
-      paymentMethod: 'Tunai',
-      status: 'Paid',
-    ),
-  ]);
+  final ValueNotifier<List<OrderItem>> ordersNotifier =
+      ValueNotifier<List<OrderItem>>([]);
 
   List<OrderItem> get orders => ordersNotifier.value;
 
-  Future<void> _initFromDatabase() async {
+  Future<void> refreshOrders() async {
     try {
       final dbOrders = await DatabaseService.instance.fetchOrders();
-      if (dbOrders.isNotEmpty) {
-        ordersNotifier.value = dbOrders.map((m) => OrderItem.fromMap(m)).toList();
-      }
+      ordersNotifier.value =
+          dbOrders.map((m) => OrderItem.fromMap(m)).toList();
     } catch (_) {}
   }
 
-  void addOrder(OrderItem order) {
+  Future<bool> addOrder(OrderItem order) async {
     ordersNotifier.value = [order, ...ordersNotifier.value];
-    // Sync to SQLite database in background
-    DatabaseService.instance.createOrder(order.toMap());
+    // Sync to Cloud Firestore immediately
+    return await DatabaseService.instance.createOrder(order.toMap());
   }
 
-  void cancelOrder(String orderId) {
+  Future<void> cancelOrder(String orderId) async {
     ordersNotifier.value = ordersNotifier.value.map((o) {
       if (o.orderId == orderId) {
         return OrderItem(
           orderId: o.orderId,
           productName: o.productName,
+          imageUrl: o.imageUrl,
           quantity: o.quantity,
           itemPrice: o.itemPrice,
           adminFee: o.adminFee,
@@ -128,7 +122,7 @@ class OrderState {
       return o;
     }).toList();
 
-    // Sync status to SQLite database in background
-    DatabaseService.instance.cancelOrder(orderId);
+    // Sync status to Cloud Firestore
+    await DatabaseService.instance.cancelOrder(orderId);
   }
 }

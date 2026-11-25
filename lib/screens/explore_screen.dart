@@ -111,6 +111,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       MaterialPageRoute(
         builder: (context) => CheckoutScreen(
           product: {
+            'title': pkg['title'],
             'name': pkg['title'],
             'category': 'Agro Tourism',
             'image': pkg['image'],

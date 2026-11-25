@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/adaptive_device.dart';
+import '../services/database_service.dart';
+import '../services/order_state.dart';
 import '../widgets/lika_brand.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
@@ -71,6 +73,9 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email,
         password: password,
       );
+
+      await DatabaseService.instance.fetchUserProfile();
+      await OrderState.instance.refreshOrders();
 
       if (!mounted) return;
       _showMessage('Selamat datang kembali di LIKA!');

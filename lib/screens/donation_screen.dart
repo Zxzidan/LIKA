@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_service.dart';
 
 class DonationScreen extends StatefulWidget {
   const DonationScreen({super.key});
@@ -355,6 +356,11 @@ class _DonationScreenState extends State<DonationScreen> {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
+                  DatabaseService.instance.createDonation(
+                    packageTitle: selectedPkg['title'] as String,
+                    amount: selectedPkg['priceInt'] as int,
+                    showDonorName: _showDonorName,
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Terima kasih telah mendukung ${selectedPkg['title']}!'),

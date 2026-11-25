@@ -2,6 +2,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/database_service.dart';
+import '../services/order_state.dart';
 import 'onboarding_screen.dart';
 import 'tracking_screen.dart';
 
@@ -42,6 +44,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (_) {}
+    _loadProfileFromFirestore();
+  }
+
+  Future<void> _loadProfileFromFirestore() async {
+    final data = await DatabaseService.instance.fetchUserProfile();
+    if (!mounted) return;
+    setState(() {
+      _userName = data['name']?.toString() ?? _userName;
+      _userHandle = data['handle']?.toString() ?? _userHandle;
+      _userEmail = data['email']?.toString() ?? _userEmail;
+      _userPhone = data['phone']?.toString() ?? _userPhone;
+      _userBio = data['bio']?.toString() ?? _userBio;
+      _userAvatar = data['avatar_url']?.toString() ?? _userAvatar;
+      _walletBalance = (data['agropay_balance'] as num?)?.toInt() ?? _walletBalance;
+      _harvestPoints = (data['points'] as num?)?.toInt() ?? _harvestPoints;
+      _couponCount = (data['coupons_count'] as num?)?.toInt() ?? _couponCount;
+
+      final savedAddresses = data['addresses'];
+      if (savedAddresses is List && savedAddresses.isNotEmpty) {
+        _addressList
+          ..clear()
+          ..addAll(savedAddresses.map((e) => Map<String, dynamic>.from(e as Map)));
+      } else {
+        for (var a in _addressList) {
+          a['recipient'] = _userName;
+          a['phone'] = _userPhone;
+        }
+      }
+    });
+  }
+
+  Map<String, dynamic> get _primaryAddress {
+    return _addressList.firstWhere(
+      (a) => a['isPrimary'] == true,
+      orElse: () => _addressList.isNotEmpty
+          ? _addressList.first
+          : {
+              'address': 'Jl. Raya Trawas No. 45, Mojokerto',
+              'city': 'Mojokerto',
+            },
+    );
+  }
+
+  void _syncProfileToFirestore() {
+    final primary = _primaryAddress;
+    DatabaseService.instance.saveUserProfile({
+      'name': _userName,
+      'handle': _userHandle,
+      'email': _userEmail,
+      'phone': _userPhone,
+      'address': primary['address']?.toString() ?? '',
+      'city': primary['city']?.toString() ?? 'Mojokerto',
+      'addresses': _addressList,
+      'bio': _userBio,
+      'avatar_url': _userAvatar,
+      'agropay_balance': _walletBalance,
+      'points': _harvestPoints,
+      'coupons_count': _couponCount,
+    });
+    try {
+      FirebaseAuth.instance.currentUser?.updateDisplayName(_userName);
+    } catch (_) {}
   }
   String _userBio = 'Pencinta buah apel segar Batu & penikmat agrowisata lokal.';
   String _userAvatar =
@@ -74,6 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'recipient': 'Dandi Azaidane',
       'phone': '0813 1903 0599',
       'address': 'Jl. Raya Trawas No. 45, Mojokerto, Jawa Timur 61375',
+      'city': 'Mojokerto',
       'isPrimary': true,
     },
     {
@@ -81,6 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'recipient': 'Dandi (Agro Team)',
       'phone': '0813 1903 0599',
       'address': 'Jl. Suropati No. 12, Pesanggrahan, Kec. Batu, Kota Batu 65313',
+      'city': 'Kota Batu',
       'isPrimary': false,
     },
   ];
@@ -254,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 iconColor: const Color(0xFFEA580C),
                 bgColor: const Color(0xFFFFEDD5),
                 title: 'Alamat Tersimpan',
-                subtitle: _addressList.isNotEmpty ? _addressList.first['address'] as String : 'Belum ada alamat',
+                subtitle: _primaryAddress['address']?.toString() ?? 'Belum ada alamat',
                 onTap: _showAddressManagementSheet,
               ),
               _MenuItem(
@@ -912,6 +978,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return GestureDetector(
                     onTap: () {
                       setState(() => _userAvatar = url);
+                      _syncProfileToFirestore();
                       Navigator.pop(ctx);
                       _showToast('Foto profil berhasil diperbarui!');
                     },
@@ -1117,6 +1184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           setState(() {
                             _walletBalance += selectedAmount;
                           });
+                          _syncProfileToFirestore();
                           Navigator.pop(ctx);
                           _showToast('Top Up ${_formatRupiah(selectedAmount)} via $selectedMethod Berhasil!');
                         },
@@ -1283,6 +1351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       _harvestPoints -= pointsNeeded;
                                       _couponCount += 1;
                                     });
+                                    _syncProfileToFirestore();
                                     setModalState(() {});
                                     _showToast('Selamat! Berhasil menukar reward: ${reward['title']}');
                                   }
@@ -1508,6 +1577,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _userPhone = phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : _userPhone;
                       _userBio = bioCtrl.text.trim().isNotEmpty ? bioCtrl.text.trim() : _userBio;
                     });
+                    _syncProfileToFirestore();
                     Navigator.pop(ctx);
                     _showToast('Profil Anda berhasil diperbarui!');
                   },
@@ -1643,6 +1713,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       }
                                       addr['isPrimary'] = true;
                                     });
+                                    _syncProfileToFirestore();
                                     setModalState(() {});
                                     _showToast('Alamat utama berhasil diubah');
                                   },
@@ -1672,6 +1743,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final recipientCtrl = TextEditingController(text: _userName);
     final phoneCtrl = TextEditingController(text: _userPhone);
     final addressCtrl = TextEditingController();
+    final cityCtrl = TextEditingController(text: 'Malang');
 
     showDialog(
       context: context,
@@ -1697,7 +1769,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               TextField(
                 controller: addressCtrl,
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Alamat Lengkap & Kota'),
+                decoration: const InputDecoration(labelText: 'Alamat Lengkap'),
+              ),
+              TextField(
+                controller: cityCtrl,
+                decoration: const InputDecoration(labelText: 'Kota / Kabupaten'),
               ),
             ],
           ),
@@ -1713,9 +1789,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'recipient': recipientCtrl.text.trim(),
                     'phone': phoneCtrl.text.trim(),
                     'address': addressCtrl.text.trim(),
+                    'city': cityCtrl.text.trim().isNotEmpty ? cityCtrl.text.trim() : 'Malang',
                     'isPrimary': false,
                   });
                 });
+                _syncProfileToFirestore();
                 onAdded();
                 Navigator.pop(ctx);
                 _showToast('Alamat baru berhasil ditambahkan');
@@ -2611,6 +2689,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     try {
                       await FirebaseAuth.instance.signOut();
                     } catch (_) {}
+                    DatabaseService.instance.userProfileNotifier.value = null;
+                    OrderState.instance.ordersNotifier.value = [];
                     if (!mounted) return;
                     _showToast('Berhasil keluar dari akun LIKA');
                     Navigator.of(context).pushAndRemoveUntil(

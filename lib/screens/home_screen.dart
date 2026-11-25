@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/adaptive_device.dart';
+import '../services/database_service.dart';
+import '../services/order_state.dart';
 import 'agro_ai_screen.dart';
 import 'donation_screen.dart';
 import 'explore_screen.dart';
@@ -20,6 +22,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFirestoreCollections();
+  }
+
+  Future<void> _syncFirestoreCollections() async {
+    // Warm up and auto-seed Firestore collections if empty
+    await Future.wait([
+      DatabaseService.instance.fetchUserProfile(),
+      DatabaseService.instance.fetchCategories(),
+      DatabaseService.instance.fetchDestinations(),
+      DatabaseService.instance.fetchProducts(),
+      OrderState.instance.refreshOrders(),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {

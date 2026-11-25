@@ -107,42 +107,48 @@ class OrdersScreen extends StatelessWidget {
   // --- ORDERS LIST (IMAGE 3 & 5: Detail Pesanan Paid/Wait) ---
   Widget _buildOrdersList(BuildContext context, List<OrderItem> orders) {
     return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatusBar(),
-            const SizedBox(height: 12),
+      child: RefreshIndicator(
+        color: const Color(0xFF15803D),
+        onRefresh: () => OrderState.instance.refreshOrders(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusBar(),
+              const SizedBox(height: 12),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Pesanan Saya',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                TextButton(
-                  onPressed: onGoToMarket,
-                  child: const Text(
-                    '+ Beli Lagi',
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Pesanan Saya',
                     style: TextStyle(
-                      color: Color(0xFF15803D),
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: onGoToMarket,
+                    child: const Text(
+                      '+ Beli Lagi',
+                      style: TextStyle(
+                        color: Color(0xFF15803D),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-            ...orders.map((order) => _buildOrderCard(context, order)),
-          ],
+              ...orders.map((order) => _buildOrderCard(context, order)),
+            ],
+          ),
         ),
       ),
     );
@@ -185,10 +191,16 @@ class OrdersScreen extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=300&q=80',
+                  order.imageUrl,
                   width: 55,
                   height: 55,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 55,
+                    height: 55,
+                    color: const Color(0xFFDCFCE7),
+                    child: const Icon(Icons.shopping_bag_rounded, color: Color(0xFF15803D)),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -237,7 +249,7 @@ class OrdersScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _buildRow('Apel', 'IDR ${_formatNumber(order.itemPrice)}'),
+          _buildRow(order.productName, 'IDR ${_formatNumber(order.itemPrice)}'),
           const SizedBox(height: 6),
           _buildRow('Admin 5%', 'IDR ${_formatNumber(order.adminFee)}'),
           const SizedBox(height: 6),
@@ -560,14 +572,19 @@ class OrdersScreen extends StatelessWidget {
   Widget _buildRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF111827),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF111827),
+            ),
           ),
         ),
       ],
