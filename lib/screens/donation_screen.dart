@@ -86,6 +86,14 @@ class _DonationScreenState extends State<DonationScreen> {
                   width: double.infinity,
                   height: 200,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: double.infinity,
+                    height: 200,
+                    color: const Color(0xFFDCFCE7),
+                    child: const Center(
+                      child: Icon(Icons.park_rounded, size: 48, color: Color(0xFF16A34A)),
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: 14,

@@ -86,7 +86,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       'tag': 'ORGANIK',
       'timeLeft': 'Sisa 5 Jam',
       'image':
-          'https://images.unsplash.com/photo-1592417817098-8f3d6910985c?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
       'category': 'Kebun Sayur',
     },
   ];
@@ -615,6 +615,58 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     height: 165,
                     width: double.infinity,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 165,
+                        width: double.infinity,
+                        color: const Color(0xFFF3F4F6),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF16A34A),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 165,
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFDCFCE7), Color(0xFFBBF7D0)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                pkg['category'] == 'Kebun Sayur' ? Icons.eco_rounded : Icons.park_rounded,
+                                size: 44,
+                                color: const Color(0xFF16A34A),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                pkg['title'] ?? 'Wisata Alam Agro',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 // Badge top left: Hemat 30% / Promo Eksklusif
@@ -1036,6 +1088,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             width: 65,
                             height: 65,
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 65,
+                              height: 65,
+                              color: const Color(0xFFDCFCE7),
+                              child: const Icon(Icons.park_rounded, color: Color(0xFF16A34A)),
+                            ),
                           ),
                         ),
                       ],
@@ -1230,6 +1288,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       width: double.infinity,
                       height: 250,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: double.infinity,
+                          height: 250,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFFDCFCE7), Color(0xFFBBF7D0)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.park_rounded, size: 56, color: Color(0xFF16A34A)),
+                          ),
+                        );
+                      },
                     ),
                     Positioned(
                       bottom: 14,
@@ -1755,7 +1829,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(url, width: 60, height: 60, fit: BoxFit.cover),
+                  child: Image.network(
+                    url,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 60,
+                      height: 60,
+                      color: const Color(0xFFE5E7EB),
+                      child: const Icon(Icons.image_not_supported_rounded, color: Color(0xFF9CA3AF), size: 20),
+                    ),
+                  ),
                 ),
               );
             }).toList(),
