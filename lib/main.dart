@@ -36,11 +36,6 @@ class MyApp extends StatelessWidget {
                 ? 'SF Pro Text'
                 : 'Roboto',
           ),
-          builder: (context, child) {
-            return DeviceSimulatorWrapper(
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
           home: const SplashScreen(),
         );
       },

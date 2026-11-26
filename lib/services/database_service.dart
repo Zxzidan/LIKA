@@ -322,14 +322,14 @@ class DatabaseService {
     }
   }
 
-  Future<bool> cancelOrder(String orderCode) async {
+  Future<bool> updateOrderStatus(String orderCode, String status) async {
     try {
       final docId = orderCode.replaceAll('#', '').replaceAll('/', '_');
       final docRef = _db.collection('orders').doc(docId);
       final doc = await docRef.get();
       if (doc.exists) {
         await docRef.update({
-          'status': 'Cancelled',
+          'status': status,
           'updated_at': FieldValue.serverTimestamp(),
         });
       } else {
@@ -339,17 +339,23 @@ class DatabaseService {
             .get();
         for (final d in snap.docs) {
           await d.reference.update({
-            'status': 'Cancelled',
+            'status': status,
             'updated_at': FieldValue.serverTimestamp(),
           });
         }
       }
       return true;
     } catch (e) {
-      debugPrint('Firestore cancelOrder error: $e');
+      debugPrint('Firestore updateOrderStatus error: $e');
       return false;
     }
   }
+
+  Future<bool> cancelOrder(String orderCode) =>
+      updateOrderStatus(orderCode, 'Cancelled');
+
+  Future<bool> completeOrder(String orderCode) =>
+      updateOrderStatus(orderCode, 'Received');
 
   // ==========================================
   // --- DONATIONS (Collection: donations) ---

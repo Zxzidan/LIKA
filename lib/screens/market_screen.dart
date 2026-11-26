@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/adaptive_device.dart';
 import '../services/database_service.dart';
 import 'product_detail_screen.dart';
 
@@ -199,28 +200,7 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   Widget _buildStatusBarHeader() {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          '9:41',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF111827),
-          ),
-        ),
-        Row(
-          children: [
-            Icon(Icons.signal_cellular_alt_rounded, size: 16, color: Color(0xFF111827)),
-            SizedBox(width: 4),
-            Icon(Icons.wifi_rounded, size: 16, color: Color(0xFF111827)),
-            SizedBox(width: 6),
-            Icon(Icons.battery_full_rounded, size: 20, color: Color(0xFF111827)),
-          ],
-        ),
-      ],
-    );
+    return const AdaptiveStatusBar();
   }
 
   Widget _buildHorizontalCard(Map<String, dynamic> p) {

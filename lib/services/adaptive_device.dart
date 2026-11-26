@@ -51,106 +51,7 @@ class AdaptiveStatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<TargetPlatform>(
-      valueListenable: AdaptivePlatform.platformNotifier,
-      builder: (context, platform, child) {
-        final isIOS = platform == TargetPlatform.iOS;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Left: Time & Device Identifier
-              if (showTime)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isIOS ? '9:41' : '10:00',
-                      style: TextStyle(
-                        fontSize: isIOS ? 14 : 13,
-                        fontWeight: isIOS ? FontWeight.w800 : FontWeight.w600,
-                        color: contentColor,
-                        letterSpacing: isIOS ? -0.3 : 0.0,
-                        fontFamily: isIOS ? 'SF Pro Text' : 'Roboto',
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        color: contentColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isIOS ? 'iOS' : 'Android',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: contentColor,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                const SizedBox(),
-
-              // Right: Signal, Wifi, Battery
-              if (isIOS)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // iOS Cellular Signal (4 bars)
-                    Icon(Icons.signal_cellular_alt_rounded, size: 16, color: contentColor),
-                    const SizedBox(width: 4),
-                    // iOS Wifi
-                    Icon(Icons.wifi_rounded, size: 16, color: contentColor),
-                    const SizedBox(width: 5),
-                    // iOS Battery Capsule
-                    Container(
-                      width: 22,
-                      height: 11,
-                      padding: const EdgeInsets.all(1.5),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: contentColor, width: 1.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: contentColor,
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '95%',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: contentColor),
-                    ),
-                    const SizedBox(width: 4),
-                    // Android Battery
-                    Icon(Icons.battery_full_rounded, size: 16, color: contentColor),
-                    const SizedBox(width: 4),
-                    // Android Wifi
-                    Icon(Icons.wifi_rounded, size: 15, color: contentColor),
-                    const SizedBox(width: 4),
-                    // Android Signal Triangle
-                    Icon(Icons.signal_cellular_4_bar_rounded, size: 15, color: contentColor),
-                  ],
-                ),
-            ],
-          ),
-        );
-      },
-    );
+    return const SizedBox.shrink();
   }
 }
 
@@ -165,6 +66,11 @@ class AdaptiveHomeIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On native mobile devices (Android/iOS), the OS already provides the status bar
+    if (!kIsWeb) {
+      return const SizedBox.shrink();
+    }
+
     return ValueListenableBuilder<TargetPlatform>(
       valueListenable: AdaptivePlatform.platformNotifier,
       builder: (context, platform, child) {
@@ -219,7 +125,7 @@ class AdaptiveBackButton extends StatelessWidget {
   }
 }
 
-/// Device Simulator Frame Wrapper (Auto adapts on Mobile / Responsive Simulator and Desktop)
+/// Pass-through wrapper (emulator bezel removed for clean full-screen display)
 class DeviceSimulatorWrapper extends StatelessWidget {
   final Widget child;
 
@@ -230,150 +136,6 @@ class DeviceSimulatorWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<TargetPlatform>(
-      valueListenable: AdaptivePlatform.platformNotifier,
-      builder: (context, platform, _) {
-        final isIOS = platform == TargetPlatform.iOS;
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            // When viewed on mobile, Chrome DevTools Device Mode, or small screen:
-            // Fill 100% of the screen seamlessly!
-            if (constraints.maxWidth <= 500) {
-              return Material(
-                color: Colors.transparent,
-                child: child,
-              );
-            }
-
-            // When viewed on desktop wide screen:
-            // Center the device inside a realistic smartphone simulator frame!
-            return Scaffold(
-              backgroundColor: const Color(0xFF1E293B),
-              body: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Platform Switcher Pill at Top of Desktop View
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white24),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isIOS ? '📱 Mode Simulator: Apple iOS' : '🤖 Mode Simulator: Google Android',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            InkWell(
-                              onTap: AdaptivePlatform.toggle,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00E676),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Text(
-                                  isIOS ? 'Ganti ke Android' : 'Ganti ke iOS',
-                                  style: const TextStyle(
-                                    color: Color(0xFF064E3B),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Device Frame
-                      Container(
-                        width: 410,
-                        height: 860,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(isIOS ? 48 : 36),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              blurRadius: 36,
-                              spreadRadius: 4,
-                              offset: const Offset(0, 16),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: isIOS ? const Color(0xFF334155) : const Color(0xFF475569),
-                            width: 10,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(isIOS ? 38 : 26),
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: MediaQuery(
-                                  data: MediaQuery.of(context).copyWith(
-                                    size: const Size(390, 840),
-                                    padding: EdgeInsets.only(
-                                      top: isIOS ? 10 : 6,
-                                      bottom: 8,
-                                    ),
-                                  ),
-                                  child: child,
-                                ),
-                              ),
-
-                              // Dynamic Island (iOS) vs Camera Punch Hole (Android)
-                              Positioned(
-                                top: 8,
-                                left: 0,
-                                right: 0,
-                                child: Center(
-                                  child: isIOS
-                                      ? Container(
-                                          width: 110,
-                                          height: 28,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                        )
-                                      : Container(
-                                          width: 14,
-                                          height: 14,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.black,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    return child;
   }
 }

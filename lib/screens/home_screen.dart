@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../services/adaptive_device.dart';
 import '../services/database_service.dart';
@@ -22,11 +24,54 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final PageController _promoController = PageController();
+  int _promoPage = 0;
+  Timer? _promoTimer;
+
+  final List<Map<String, dynamic>> _promoBanners = const [
+    {
+      'badge': 'PROMO TERBATAS',
+      'title': 'Festival Apel &\nPanen Raya!',
+      'subtitle': 'Diskon s/d 50% untuk semua hasil bumi.',
+      'colors': [Color(0xFF16A34A), Color(0xFF22C55E)],
+      'targetTab': 2, // Pasar
+    },
+    {
+      'badge': 'WISATA SERU',
+      'title': 'Petik Apel Cak Ka\nHemat 30%!',
+      'subtitle': 'Nikmati akhir pekan asri bersama keluarga di Batu.',
+      'colors': [Color(0xFF047857), Color(0xFF10B981)],
+      'targetTab': 1, // Agro Tourism
+    },
+    {
+      'badge': 'PROGRAM PANEN',
+      'title': 'Adopsi Pohon &\nBantu Petani Lokal!',
+      'subtitle': 'Dapatkan hasil panen segar langsung dari kebun.',
+      'colors': [Color(0xFF15803D), Color(0xFF65A30D)],
+      'targetTab': -1, // Opens DonationScreen
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
     _syncFirestoreCollections();
+    _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_promoController.hasClients) return;
+      final next = (_promoPage + 1) % _promoBanners.length;
+      _promoController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _promoTimer?.cancel();
+    _promoController.dispose();
+    super.dispose();
   }
 
   Future<void> _syncFirestoreCollections() async {
@@ -127,9 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildCategoryGrid(),
                 const SizedBox(height: 22),
 
-                // 5. Active Order Card (Pesanan Aktif)
+                // 5. Active Order Card (Pesanan Aktif - hides automatically once received)
                 _buildActiveOrderCard(),
-                const SizedBox(height: 24),
 
                 // 6. Momen Wisata Section
                 _buildMomenWisataSection(),
@@ -220,136 +264,190 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 3. PROMO BANNER ---
+  // --- 3. PROMO BANNER (SWIPEABLE CAROUSEL) ---
   Widget _buildPromoBanner() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF16A34A), Color(0xFF22C55E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF16A34A).withValues(alpha: 0.28),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return SizedBox(
+      height: 162,
       child: Stack(
         children: [
-          // Background decorative watermark shapes
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+              },
+            ),
+            child: PageView.builder(
+              controller: _promoController,
+              itemCount: _promoBanners.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _promoPage = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                final banner = _promoBanners[index];
+                final colors = banner['colors'] as List<Color>;
+                final targetTab = banner['targetTab'] as int;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (targetTab >= 0) {
+                        setState(() => _selectedIndex = targetTab);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DonationScreen(),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: colors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors.first.withValues(alpha: 0.25),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Stack(
+                          children: [
+                            // Background decorative watermark shapes
+                            Positioned(
+                              right: -20,
+                              top: -20,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right: 30,
+                              bottom: -30,
+                              child: Container(
+                                width: 140,
+                                height: 140,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.06),
+                                ),
+                              ),
+                            ),
+
+                            Padding(
+                              padding: const EdgeInsets.all(18.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Tag
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.22),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      banner['badge'] as String,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // Headline
+                                  Text(
+                                    banner['title'] as String,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.2,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+
+                                  // Subtitle
+                                  Text(
+                                    banner['subtitle'] as String,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.92),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
+
+          // Interactive Carousel Dots overlay
           Positioned(
-            right: 30,
-            bottom: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(18.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Tag "PROMO TERBATAS"
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'PROMO TERBATAS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
+            right: 18,
+            bottom: 14,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(_promoBanners.length, (idx) {
+                final isActive = _promoPage == idx;
+                return GestureDetector(
+                  onTap: () {
+                    _promoController.animateToPage(
+                      idx,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.only(left: 5),
+                    width: isActive ? 18 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-
-                // Headline
-                const Text(
-                  'Festival Apel &\nPanen Raya!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    height: 1.22,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // Subtitle
-                Text(
-                  'Diskon s/d 50% untuk semua hasil bumi.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Carousel Dots
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                );
+              }),
             ),
           ),
         ],
@@ -494,140 +592,171 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- 5. ACTIVE ORDER CARD (PESANAN AKTIF) ---
   Widget _buildActiveOrderCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: const BoxDecoration(
-            border: Border(
-              left: BorderSide(color: Color(0xFF16A34A), width: 4),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              // Icon Delivery Truck
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.local_shipping_outlined,
-                  color: Color(0xFF15803D),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
+    return ValueListenableBuilder<List<OrderItem>>(
+      valueListenable: OrderState.instance.ordersNotifier,
+      builder: (context, orders, _) {
+        final activeOrders = orders
+            .where((o) =>
+                o.status != 'Cancelled' &&
+                o.status != 'Received' &&
+                o.status != 'Completed')
+            .toList();
 
-              // Detail Pesanan
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF16A34A),
-                            shape: BoxShape.circle,
-                          ),
+        // When no active orders remain (or all have been received), hide completely
+        if (activeOrders.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final active = activeOrders.first;
+
+        return Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      left: BorderSide(color: Color(0xFF16A34A), width: 4),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      // Icon Delivery Truck
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'PESANAN AKTIF',
+                        child: const Icon(
+                          Icons.local_shipping_outlined,
+                          color: Color(0xFF15803D),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Detail Pesanan
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF16A34A),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'PESANAN AKTIF',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF4B5563),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              active.productName,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF111827),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${active.customerAddress}, ${active.customerCity}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Kurir sedang menuju lokasi Anda',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF15803D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Tombol LACAK
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TrackingScreen(
+                                orderCode: active.orderId,
+                                productName: active.productName,
+                                destination:
+                                    '${active.customerAddress}, ${active.customerCity}',
+                                totalPrice: active.totalPrice,
+                                quantity: active.quantity,
+                                driverName: 'Cak Yo',
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF14532D),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(0, 34),
+                        ),
+                        child: const Text(
+                          'LACAK',
                           style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF4B5563),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'Apel Cak Ka',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
                       ),
-                    ),
-                    const Text(
-                      'Trawas, Mojokerto',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Driver sudah di Jl. Ijen',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF15803D),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Tombol LACAK
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TrackingScreen(
-                        orderCode: '#FH341391',
-                        productName: 'Apel Cak Ka (10 kg)',
-                        destination: 'Jl. Ijen No. 12, Malang',
-                        driverName: 'Cak Yo',
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF14532D),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  minimumSize: const Size(0, 34),
-                ),
-                child: const Text(
-                  'LACAK',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
     );
   }
 

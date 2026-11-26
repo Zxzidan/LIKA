@@ -306,41 +306,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // 3. Section: Akun & Transaksi
             _buildSectionTitle('Akun & Aktivitas'),
             const SizedBox(height: 10),
-            _buildMenuCard([
-              _MenuItem(
-                icon: Icons.person_outline_rounded,
-                iconColor: const Color(0xFF0284C7),
-                bgColor: const Color(0xFFE0F2FE),
-                title: 'Ubah Profil',
-                subtitle: 'Nama, email, dan nomor telepon',
-                onTap: _showEditProfileSheet,
-              ),
-              _MenuItem(
-                icon: Icons.location_on_outlined,
-                iconColor: const Color(0xFFEA580C),
-                bgColor: const Color(0xFFFFEDD5),
-                title: 'Alamat Tersimpan',
-                subtitle: _primaryAddress['address']?.toString() ?? 'Belum ada alamat',
-                onTap: _showAddressManagementSheet,
-              ),
-              _MenuItem(
-                icon: Icons.receipt_long_outlined,
-                iconColor: const Color(0xFF15803D),
-                bgColor: const Color(0xFFDCFCE7),
-                title: 'Riwayat Pesanan',
-                subtitle: 'Cek transaksi buah dan tiket wisata',
-                badgeText: '1 Aktif',
-                onTap: _showOrdersHistorySheet,
-              ),
-              _MenuItem(
-                icon: Icons.favorite_border_rounded,
-                iconColor: const Color(0xFFDB2777),
-                bgColor: const Color(0xFFFCE7F3),
-                title: 'Favorit & Wishlist',
-                subtitle: '${_favorites.length} kebun & komoditas disukai',
-                onTap: _showFavoritesSheet,
-              ),
-            ]),
+            ValueListenableBuilder<List<OrderItem>>(
+              valueListenable: OrderState.instance.ordersNotifier,
+              builder: (context, orders, _) {
+                final activeCount = OrderState.instance.activeOrders.length;
+                return _buildMenuCard([
+                  _MenuItem(
+                    icon: Icons.person_outline_rounded,
+                    iconColor: const Color(0xFF0284C7),
+                    bgColor: const Color(0xFFE0F2FE),
+                    title: 'Ubah Profil',
+                    subtitle: 'Nama, email, dan nomor telepon',
+                    onTap: _showEditProfileSheet,
+                  ),
+                  _MenuItem(
+                    icon: Icons.location_on_outlined,
+                    iconColor: const Color(0xFFEA580C),
+                    bgColor: const Color(0xFFFFEDD5),
+                    title: 'Alamat Tersimpan',
+                    subtitle: _primaryAddress['address']?.toString() ?? 'Belum ada alamat',
+                    onTap: _showAddressManagementSheet,
+                  ),
+                  _MenuItem(
+                    icon: Icons.receipt_long_outlined,
+                    iconColor: const Color(0xFF15803D),
+                    bgColor: const Color(0xFFDCFCE7),
+                    title: 'Riwayat Pesanan',
+                    subtitle: 'Cek transaksi buah dan tiket wisata',
+                    badgeText: activeCount > 0 ? '$activeCount Aktif' : null,
+                    onTap: _showOrdersHistorySheet,
+                  ),
+                  _MenuItem(
+                    icon: Icons.favorite_border_rounded,
+                    iconColor: const Color(0xFFDB2777),
+                    bgColor: const Color(0xFFFCE7F3),
+                    title: 'Favorit & Wishlist',
+                    subtitle: '${_favorites.length} kebun & komoditas disukai',
+                    onTap: _showFavoritesSheet,
+                  ),
+                ]);
+              },
+            ),
             const SizedBox(height: 22),
 
             // 4. Section: Pengaturan & Keamanan
@@ -1102,13 +1108,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF15803D)),
                         ),
                         const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Top Up AgroPay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text('Saldo saat ini: ${_formatRupiah(_walletBalance)}',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Top Up AgroPay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text('Saldo saat ini: ${_formatRupiah(_walletBalance)}',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1151,7 +1159,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF15803D), size: 20),
                                 SizedBox(width: 8),
-                                Text('QRIS (GoPay, OVO, ShopeePay, DANA)', style: TextStyle(fontSize: 12.5)),
+                                Expanded(
+                                  child: Text(
+                                    'QRIS (GoPay, OVO, ShopeePay, DANA)',
+                                    style: TextStyle(fontSize: 12.5),
+                                  ),
+                                ),
                               ],
                             ),
                             value: 'QRIS',
@@ -1165,7 +1178,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 Icon(Icons.account_balance_rounded, color: Color(0xFF0284C7), size: 20),
                                 SizedBox(width: 8),
-                                Text('Virtual Account (BCA / Mandiri / BRI)', style: TextStyle(fontSize: 12.5)),
+                                Expanded(
+                                  child: Text(
+                                    'Virtual Account (BCA / Mandiri / BRI)',
+                                    style: TextStyle(fontSize: 12.5),
+                                  ),
+                                ),
                               ],
                             ),
                             value: 'VA',
@@ -1853,63 +1871,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            // Active Order Card
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                border: Border.all(color: const Color(0xFF86EFAC)),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF15803D),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text('Sedang Dikirim', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                      const Text('#FH3413919204', style: TextStyle(fontSize: 11, color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
-                    ],
+            // Active Order Card (hidden when no active unreceived orders remain)
+            if (OrderState.instance.activeOrders.isNotEmpty) ...[
+              Builder(builder: (context) {
+                final active = OrderState.instance.activeOrders.first;
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 10),
-                  const Text('Apel Cak Ka (10 kg)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('Driver: Cak Yo • Menuju Jl. Ijen No. 12, Malang', style: TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
-                  const SizedBox(height: 12),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const TrackingScreen()),
-                            );
-                          },
-                          icon: const Icon(Icons.delivery_dining_rounded, size: 18),
-                          label: const Text('Lacak Kurir Live'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF15803D),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            elevation: 0,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF15803D),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text('Sedang Dikirim', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
-                        ),
+                          Text(active.orderId, style: const TextStyle(fontSize: 11, color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text('${active.productName} (${active.quantity} items)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text('Driver: Cak Yo • Menuju ${active.customerAddress}, ${active.customerCity}', style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TrackingScreen(
+                                      orderCode: active.orderId,
+                                      productName: active.productName,
+                                      destination: '${active.customerAddress}, ${active.customerCity}',
+                                      totalPrice: active.totalPrice,
+                                      quantity: active.quantity,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.delivery_dining_rounded, size: 18),
+                              label: const Text('Lacak Kurir Live'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF15803D),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
+                );
+              }),
+              const SizedBox(height: 14),
+            ],
             // Past Order Card
             Container(
               padding: const EdgeInsets.all(14),

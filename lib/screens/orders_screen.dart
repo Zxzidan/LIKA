@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/adaptive_device.dart';
 import '../services/order_state.dart';
+import 'tracking_screen.dart';
 
 class OrdersScreen extends StatelessWidget {
   final VoidCallback onGoToMarket;
@@ -156,6 +158,8 @@ class OrdersScreen extends StatelessWidget {
 
   Widget _buildOrderCard(BuildContext context, OrderItem order) {
     final isCancelled = order.status == 'Cancelled';
+    final isReceived =
+        order.status == 'Received' || order.status == 'Completed';
     final isPaid = order.status == 'Paid';
 
     return Container(
@@ -318,11 +322,11 @@ class OrdersScreen extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  order.status,
+                  isReceived ? 'Selesai' : order.status,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: isPaid
+                    color: (isPaid || isReceived)
                         ? const Color(0xFF00BFA5)
                         : (isCancelled ? const Color(0xFFDC2626) : const Color(0xFFF59E0B)),
                   ),
@@ -332,8 +336,27 @@ class OrdersScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Action Buttons: "Batalkan Pesanan" (Image 5 & 8) / "Selanjutnya" (Image 3)
-          if (!isCancelled)
+          // Action Buttons: "Batalkan Pesanan" / "Lacak Driver" (hidden when completed or cancelled)
+          if (isReceived)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: const Center(
+                child: Text(
+                  '✓ Pesanan Sudah Diterima',
+                  style: TextStyle(
+                    color: Color(0xFF15803D),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            )
+          else if (!isCancelled)
             Row(
               children: [
                 Expanded(
@@ -360,8 +383,18 @@ class OrdersScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Driver sedang mengantarkan pesanan Anda!')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TrackingScreen(
+                            orderCode: order.orderId,
+                            productName: order.productName,
+                            destination: '${order.customerAddress}, ${order.customerCity}',
+                            totalPrice: order.totalPrice,
+                            quantity: order.quantity,
+                            driverName: 'Cak Yo',
+                          ),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -592,28 +625,7 @@ class OrdersScreen extends StatelessWidget {
   }
 
   Widget _buildStatusBar() {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          '9:41',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF111827),
-          ),
-        ),
-        Row(
-          children: [
-            Icon(Icons.signal_cellular_alt_rounded, size: 16, color: Color(0xFF111827)),
-            SizedBox(width: 4),
-            Icon(Icons.wifi_rounded, size: 16, color: Color(0xFF111827)),
-            SizedBox(width: 6),
-            Icon(Icons.battery_full_rounded, size: 20, color: Color(0xFF111827)),
-          ],
-        ),
-      ],
-    );
+    return const AdaptiveStatusBar();
   }
 
   String _formatNumber(int number) {

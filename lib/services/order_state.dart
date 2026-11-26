@@ -94,13 +94,20 @@ class OrderState {
     } catch (_) {}
   }
 
+  List<OrderItem> get activeOrders => ordersNotifier.value
+      .where((o) =>
+          o.status != 'Cancelled' &&
+          o.status != 'Received' &&
+          o.status != 'Completed')
+      .toList();
+
   Future<bool> addOrder(OrderItem order) async {
     ordersNotifier.value = [order, ...ordersNotifier.value];
     // Sync to Cloud Firestore immediately
     return await DatabaseService.instance.createOrder(order.toMap());
   }
 
-  Future<void> cancelOrder(String orderId) async {
+  Future<void> _updateOrderStatus(String orderId, String newStatus) async {
     ordersNotifier.value = ordersNotifier.value.map((o) {
       if (o.orderId == orderId) {
         return OrderItem(
@@ -116,13 +123,18 @@ class OrderState {
           customerAddress: o.customerAddress,
           customerCity: o.customerCity,
           paymentMethod: o.paymentMethod,
-          status: 'Cancelled',
+          status: newStatus,
         );
       }
       return o;
     }).toList();
 
-    // Sync status to Cloud Firestore
-    await DatabaseService.instance.cancelOrder(orderId);
+    await DatabaseService.instance.updateOrderStatus(orderId, newStatus);
   }
+
+  Future<void> cancelOrder(String orderId) =>
+      _updateOrderStatus(orderId, 'Cancelled');
+
+  Future<void> completeOrder(String orderId) =>
+      _updateOrderStatus(orderId, 'Received');
 }
