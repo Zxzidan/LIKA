@@ -70,68 +70,61 @@ class _SplashScreenState extends State<SplashScreen>
       body: LikaGreenBackground(
         darkTop: true,
         child: SafeArea(
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-                child: AdaptiveStatusBar(contentColor: Colors.white),
-              ),
-              const Spacer(),
-              FadeTransition(
-                opacity: _fadeAnim,
-                child: ScaleTransition(
-                  scale: _scaleAnim,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const LikaLogoMark(size: 118),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'LIKA',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 40,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 3.0,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black26,
-                              blurRadius: 12,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Agrowisata Platform',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
-                  ),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
+                  child: AdaptiveStatusBar(contentColor: Colors.white),
                 ),
-              ),
-              const Spacer(),
-              // Bottom loading indicator
-              Padding(
-                padding: const EdgeInsets.only(bottom: 36.0),
-                child: SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.6,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withValues(alpha: 0.85),
+                const Spacer(),
+                Center(
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: ScaleTransition(
+                      scale: _scaleAnim,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const LikaLogoMark(size: 190, includeText: true),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Agrowisata Platform',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                const Spacer(),
+                // Bottom loading indicator
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 36.0),
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.6,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

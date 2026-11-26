@@ -1146,106 +1146,129 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- 7. BOTTOM NAVIGATION BAR ---
   Widget _buildBottomNavigationBar() {
     final navItems = [
-      {'label': 'Beranda', 'icon': Icons.home_rounded},
+      {'label': 'Beranda', 'icon': Icons.home_outlined},
       {'label': 'Jelajah', 'icon': Icons.explore_outlined},
       {'label': 'Pasar', 'icon': Icons.shopping_bag_outlined},
       {'label': 'Pesanan', 'icon': Icons.receipt_long_outlined},
       {'label': 'Profil', 'icon': Icons.person_outline_rounded},
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(navItems.length, (index) {
-                final item = navItems[index];
-                final isSelected = _selectedIndex == index;
-
-                if (isSelected) {
-                  return _buildActiveTab(
-                    icon: item['icon'] as IconData,
-                    label: item['label'] as String,
-                  );
-                }
-
-                return _buildInactiveTab(
-                  index: index,
-                  icon: item['icon'] as IconData,
-                  label: item['label'] as String,
-                );
-              }),
-            ),
-            const AdaptiveHomeIndicator(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActiveTab({required IconData icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF14532D),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return SafeArea(
+      top: false,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 20),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Container(
+              height: 66,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: const Color(0xFFE5E7EB).withValues(alpha: 0.75),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 22,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 6),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: List.generate(navItems.length, (index) {
+                  final item = navItems[index];
+                  return Expanded(
+                    child: _buildNavItem(
+                      index: index,
+                      icon: item['icon'] as IconData,
+                      label: item['label'] as String,
+                      isSelected: _selectedIndex == index,
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
+          const AdaptiveHomeIndicator(),
         ],
       ),
     );
   }
 
-  Widget _buildInactiveTab({
+  Widget _buildNavItem({
     required int index,
     required IconData icon,
     required String label,
+    required bool isSelected,
   }) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    const activeColor = Color(0xFF1F2937);
+    const inactiveColor = Color(0xFF8E8E93);
+    const animDuration = Duration(milliseconds: 220);
+    const animCurve = Curves.easeOutCubic;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
           children: [
-            Icon(icon, color: const Color(0xFF6B7280), size: 20),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+            // Icon lifts upward and grows subtly when active
+            AnimatedPositioned(
+              duration: animDuration,
+              curve: animCurve,
+              top: isSelected ? 6 : 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: AnimatedScale(
+                  scale: isSelected ? 1.14 : 1.0,
+                  duration: animDuration,
+                  curve: animCurve,
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                ),
+              ),
+            ),
+            // Label stays grounded along a uniform bottom baseline
+            Positioned(
+              bottom: 7,
+              left: 2,
+              right: 2,
+              child: AnimatedDefaultTextStyle(
+                duration: animDuration,
+                curve: animCurve,
+                style: TextStyle(
+                  color: isSelected ? activeColor : inactiveColor,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  height: 1.2,
+                ),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ],

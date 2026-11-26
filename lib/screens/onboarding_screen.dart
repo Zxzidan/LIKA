@@ -305,24 +305,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   const Spacer(),
-                  const LikaLogoMark(size: 112),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'LIKA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3.0,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const LikaLogoMark(size: 176, includeText: true),
                   const SizedBox(height: 16),
                   Text(
                     'Nikmati Pengalaman Petik Buah,\nBelanja Hasil Tani, & Jelajah Kebun',
